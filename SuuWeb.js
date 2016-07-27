@@ -53,26 +53,10 @@ var SuuImage = {
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
         suuImage.position_update = function () {
-            // gl.bindBuffer(gl.ARRAY_BUFFER, suuImage.position_buffer);
-            // gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            //     suuImage.x/webgl_width-1,(suuImage.y+suuImage.height)/webgl_height-1,
-            //     suuImage.x/webgl_width-1,suuImage.y/webgl_height-1,
-            //     (suuImage.x+suuImage.width)/webgl_width-1,(suuImage.y+suuImage.height)/webgl_height-1,
-            //     (suuImage.x+suuImage.width)/webgl_width-1,suuImage.y/webgl_height-1
-            // ]), gl.STATIC_DRAW);
             gl.uniform4f(mposition,width,height,1,1);
             gl.uniform4f(tposition,x/webgl_width-1,y/webgl_height-1,0,0);
         }
         suuImage.texcoord_update = function () {
-            // gl.bindBuffer(gl.ARRAY_BUFFER, suuImage.texcoord_buffer);
-            // gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            //     1.0/suuImage.divideX*(suuImage.chooseX-1.0), 1.0/suuImage.divideY*(suuImage.chooseY-1.0),
-            //     1.0/suuImage.divideX*(suuImage.chooseX-1.0), 1.0/suuImage.divideY*suuImage.chooseY,
-            //     1.0/suuImage.divideX*suuImage.chooseX, 1.0/suuImage.divideY*(suuImage.chooseY-1.0),
-            //     1.0/suuImage.divideX*suuImage.chooseX, 1.0/suuImage.divideY*suuImage.chooseY
-            // ]), gl.STATIC_DRAW);
-            // gl.uniform2f(mtexcoord,1.0/divideX,1.0/divideY);
-            // gl.uniform2f(ttexcoord,1.0/divideX*(chooseX-1),1.0/divideY*(chooseY-1));
             gl.uniform2f(mtexcoord,1/suuImage.divideX,1/suuImage.divideY);
             gl.uniform2f(ttexcoord,(suuImage.chooseX-1)/suuImage.divideX,(suuImage.chooseY-1)/suuImage.divideY);
         }
@@ -98,7 +82,6 @@ var SuuImage = {
         suuImage.position_update();
         suuImage.texcoord_update();
         suuImage.color_update();
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
         return suuImage;
     }
@@ -169,10 +152,15 @@ function webgl_op(){
         1, 1
     ]), gl.STATIC_DRAW);
     gl.vertexAttribPointer(texcoord, 2, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
+    //图形缩放
     mposition = gl.getUniformLocation(program, "mposition");;
-    mtexcoord = gl.getUniformLocation(program, "mtexcoord");;
+    //图形移动
     tposition = gl.getUniformLocation(program, "tposition");;
+    //纹理裁剪
+    mtexcoord = gl.getUniformLocation(program, "mtexcoord");;
+    //纹理选择
     ttexcoord = gl.getUniformLocation(program, "ttexcoord");;
     texture = gl.getUniformLocation(program, "texture");
     color = gl.getUniformLocation(program, "color");
@@ -184,9 +172,11 @@ function webgl_op(){
 
 function webgl_play(){
     setTimeout("webgl_play();",play_time);
+    s1.update();
     s2.update();
-    gl.clearColor(0, 0, 0, 1);
+    gl.clearColor(1, 1, 1, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
+    s1.play();
     s2.play();
 
     fps++;
@@ -203,6 +193,7 @@ function webgl_play(){
 }
 
 //----------function----------//
+var s1;
 var s2;
 var date;
 var second = 0;
@@ -217,6 +208,8 @@ function op(canvas, width, height, fps){
     play_time = 1000/fps;
     gl=canvas.getContext("webgl");
     webgl_op();
+
+    s1 = SuuImage.op(600,600,500,500,8,4,"image/xxyd.png");
     s2 = SuuImage.op(100,100,500,500,5,5,"image/tx.png");
     webgl_play();
 }
