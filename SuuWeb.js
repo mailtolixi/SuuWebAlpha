@@ -13,9 +13,37 @@ var ttexcoord;
 var mposition;
 var mtexcoord;
 //----------class----------//
+var MinHashMap = {
+    op: function () {
+        var minHashMap = {};
+        //MinHashMap-variable
+        minHashMap.obj = new Object();
+        minHashMap.size = 0;
 
+        //MinHashMap-function
+        minHashMap.containskey = function (key) {
+            return (key in minHashMap.obj);
+        }
+        minHashMap.put = function (key, texture) {
+            if (!this.containsKey(key)){
+                minHashMap.size ++;
+            } else {
+                return
+            }
+            obj[key] = value;
+        }
+        minHashMap.get=function(key){
+            return minHashMap.containsKey(key)?obj[key]:null;
+        }
+        minHashMap.remove=function(key){
+            if(minHashMap.containsKey(key)&&(delete obj[key])){
+                minHashMap.size --;
+            }
+        };
+    }
+}
 var SuuImage = {
-    op: function(x,y,width,height,divideX,divideY,image_path){
+    op: function(x, y, width, height, divideX, divideY, image_path){
         var suuImage = {};
         //SuuActor-variable
         suuImage.x = x;
@@ -53,42 +81,42 @@ var SuuImage = {
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
         suuImage.position_update = function () {
-            gl.uniform4f(mposition,width,height,1,1);
-            gl.uniform4f(tposition,x/webgl_width-1,y/webgl_height-1,0,0);
+            gl.uniform4f(mposition, suuImage.width * 2, suuImage.height * 2, 1, 1);
+            gl.uniform4f(tposition, suuImage.x * 2 / webgl_width - 1, suuImage.y * 2 / webgl_height - 1, 0, 0);
         }
         suuImage.texcoord_update = function () {
-            gl.uniform2f(mtexcoord,1/suuImage.divideX,1/suuImage.divideY);
-            gl.uniform2f(ttexcoord,(suuImage.chooseX-1)/suuImage.divideX,(suuImage.chooseY-1)/suuImage.divideY);
+            gl.uniform2f(mtexcoord, 1 / suuImage.divideX, 1 / suuImage.divideY);
+            gl.uniform2f(ttexcoord, (suuImage.chooseX - 1) / suuImage.divideX, (suuImage.chooseY - 1) / suuImage.divideY);
         }
         suuImage.color_update = function () {
-            gl.uniform4f(color,1,1,1,suuImage.alpha);
+            gl.uniform4f(color, 1, 1, 1, suuImage.alpha);
         }
-        suuImage.setxy = function () {
-
+        suuImage.setxy = function (x, y) {
+            suuImage.x = x;
+            suuImage.y = y;
+        }
+        suuImage.inactor = function (x, y) {
+            if(x >= suuImage.x && x <= suuImage.x + suuImage.width &&
+                y >= suuImage.y && y <= suuImage.y + suuImage.height) {
+                return true;
+            }
+            return false;
         }
         suuImage.update = function () {
             suuImage.chooseX ++;
-            if(suuImage.chooseX>suuImage.divideX&&suuImage.chooseY<suuImage.divideY){
+            if (suuImage.chooseX > suuImage.divideX && suuImage.chooseY < suuImage.divideY){
                 suuImage.chooseX = 1;
                 suuImage.chooseY ++;
-            }else if(suuImage.chooseX>suuImage.divideX&&suuImage.chooseY==suuImage.divideY){
+            } else if (suuImage.chooseX > suuImage.divideX && suuImage.chooseY == suuImage.divideY){
                 suuImage.chooseX = 1;
                 suuImage.chooseY = 1;
             }
             suuImage.texcoord_update();
         }
-        //SuuActor-op()
-
-        suuImage.position_update();
-        suuImage.texcoord_update();
-        suuImage.color_update();
-
         return suuImage;
     }
 };
 //----------webgl----------//
-
-
 function webgl_op(){
     gl.viewport(0, 0, webgl_width, webgl_height);
 
@@ -119,8 +147,8 @@ function webgl_op(){
 
     var vertex_shader = gl.createShader(gl.VERTEX_SHADER);
     var fragment_shader = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(vertex_shader,VERTEX_SHADER_SOURCE);
-    gl.shaderSource(fragment_shader,FRAGMENT_SHADER_SOURCE);
+    gl.shaderSource(vertex_shader, VERTEX_SHADER_SOURCE);
+    gl.shaderSource(fragment_shader, FRAGMENT_SHADER_SOURCE);
     gl.compileShader(vertex_shader);
     gl.compileShader(fragment_shader);
     var program = gl.createProgram();
@@ -171,69 +199,94 @@ function webgl_op(){
 }
 
 function webgl_play(){
-    setTimeout("webgl_play();",play_time);
     s1.update();
-    s2.update();
+    // s2.update();
     gl.clearColor(1, 1, 1, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     s1.play();
-    s2.play();
+    // s2.play();
 
-    fps++;
+    fps ++;
     date = new Date();
-    if (date.getSeconds()==0&&second==59){
+    if (date.getSeconds() == 0 && second == 59){
         second = date.getSeconds();
-        document.getElementById("test").innerHTML =second+ "||fps:"+fps;
-        fps=0;
+        document.getElementById("fpsMsg").innerHTML = "fps:" + fps;
+        fps = 0;
     } else if (date.getSeconds() - second >= 1){
         second = date.getSeconds();
-        document.getElementById("test").innerHTML =second+ "||fps:"+fps;
-        fps=0;
+        document.getElementById("fpsMsg").innerHTML = "fps:" + fps;
+        fps = 0;
     }
 }
 
 //----------function----------//
 var s1;
-var s2;
+// var s2;
 var date;
 var second = 0;
 var fps = 0;
 
 //开始调用执行
 function op(canvas, width, height, fps){
-    var canvas=document.getElementById(canvas);
+    var canvas = document.getElementById(canvas);
     addevent(canvas);
-    webgl_width = canvas.width;
-    webgl_height = canvas.height;
-    play_time = 1000/fps;
-    gl=canvas.getContext("webgl");
+    canvas.width = width;
+    canvas.height = height;
+    webgl_width = width;
+    webgl_height = height;
+    play_time = 1000 / fps;
+    gl = canvas.getContext("webgl");
     webgl_op();
 
-    s1 = SuuImage.op(600,600,500,500,8,4,"image/xxyd.png");
-    s2 = SuuImage.op(100,100,500,500,5,5,"image/tx.png");
-    webgl_play();
-}
+    s1 = SuuImage.op(200, 200, 100, 100, 1, 1,"image/lightblueflower.JPG");
+    // s2 = SuuImage.op(0, 0, 180, 180, 5, 5,"image/tx.png");
 
+    setInterval("webgl_play();", play_time);
+}
+var sx = 0;
+var sy = 0;
+var flag = false;
 //加载点击和触摸事件
 function addevent(canvas){
+    var x,y;
     canvas.addEventListener("mousedown",function (e) {
-        document.getElementById("test").innerHTML ="mousedown:"+e.pageX+","+(webgl_height-e.pageY);
+        x = e.clientX;
+        y = webgl_height - e.clientY;
+        document.getElementById("operationMsg").innerHTML ="mousedown:" + x + "," + y;
+        if (s1.inactor(x,y)){
+            sx = x - s1.x;
+            sy = y - s1.y;
+            flag  = true;
+        }
     },false);
     canvas.addEventListener("mousemove",function (e) {
-        document.getElementById("test").innerHTML ="mousemove:"+e.pageX+","+(webgl_height-e.pageY);
+        x = e.clientX;
+        y = webgl_height - e.clientY;
+        document.getElementById("operationMsg").innerHTML ="mousemove:" + x + "," + y;
+        if (flag){
+            s1.setxy(x-sx,y-sy);
+        }
     },false);
     canvas.addEventListener("mouseup",function (e) {
-        document.getElementById("test").innerHTML ="mouseup:"+e.pageX+","+(webgl_height-e.pageY);
-        s2.update();
+        x = e.clientX;
+        y = webgl_height - e.clientY;
+        document.getElementById("operationMsg").innerHTML ="mouseup:" + x + "," + y;
+        flag = false;
     },false);
 
     canvas.addEventListener("touchstart",function (e) {
-        document.getElementById("test").innerHTML ="touchstart:"+e.touches[0].clientX+","+e.touches[0].clientY;
+        x = e.touches[0].clientX;
+        y = webgl_height - Math.floor(e.touches[0].clientY);
+        document.getElementById("operationMsg").innerHTML ="touchstart:" + x + "," + y;
     },false);
     canvas.addEventListener("touchmove",function (e) {
-        document.getElementById("test").innerHTML ="touchmove:"+e.touches[0].clientX+","+e.touches[0].clientY;
+        x = e.pageX;
+        y = webgl_height - Math.floor(e.touches[0].clientY);
+        document.getElementById("operationMsg").innerHTML ="touchmove:" + x + "," + y;
     },false);
     canvas.addEventListener("touchend",function (e) {
-        document.getElementById("test").innerHTML ="touchend:"+e.touches[0].clientX+","+e.touches[0].clientY;
+        x = e.pageX;
+        y = webgl_height - Math.floor(e.touches[0].clientY);
+        document.getElementById("operationMsg").innerHTML ="touchend:" + x + "," + y;
     },false);
 }
