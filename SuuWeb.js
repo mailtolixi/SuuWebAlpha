@@ -1,17 +1,24 @@
 //----------variable----------//
+var screen;
+var image;
+var animation;
+var sound;
+
 var webgl_width;
 var webgl_height;
 var play_time;
-var play_speed = 5;
 
 var gl;
 
+//图像大小与位置
+var tposition;
+var mposition;
+//纹理分割与选择
+var ttexcoord;
+var mtexcoord;
+//纹理贴图与颜色
 var texture;
 var color;
-var tposition;
-var ttexcoord;
-var mposition;
-var mtexcoord;
 //----------class----------//
 var MinHashMap = {
     op: function () {
@@ -24,24 +31,27 @@ var MinHashMap = {
         minHashMap.containskey = function (key) {
             return (key in minHashMap.obj);
         }
-        minHashMap.put = function (key, texture) {
-            if (!this.containsKey(key)){
+        minHashMap.put = function (key, value) {
+            if (!minHashMap.containskey(key)){
                 minHashMap.size ++;
             } else {
-                return
+                return;
             }
-            obj[key] = value;
+            minHashMap.obj[key] = value;
         }
         minHashMap.get=function(key){
-            return minHashMap.containsKey(key)?obj[key]:null;
+            return minHashMap.containskey(key)?minHashMap.obj[key]:null;
         }
         minHashMap.remove=function(key){
-            if(minHashMap.containsKey(key)&&(delete obj[key])){
+            if(minHashMap.containsKey(key)&&(delete minHashMap.obj[key])){
                 minHashMap.size --;
             }
         };
+
+        return minHashMap;
     }
 }
+
 var SuuImage = {
     op: function(x, y, width, height, divideX, divideY, image_path){
         var suuImage = {};
@@ -199,12 +209,12 @@ function webgl_op(){
 }
 
 function webgl_play(){
-    s1.update();
-    // s2.update();
-    gl.clearColor(1, 1, 1, 1);
+    // screen.get("new").update();
+    // s1.update();
+    gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    s1.play();
-    // s2.play();
+    screen.get("new").play();
+    // s1.play();
 
     fps ++;
     date = new Date();
@@ -234,11 +244,16 @@ function op(canvas, width, height, fps){
     canvas.height = height;
     webgl_width = width;
     webgl_height = height;
+    screen = MinHashMap.op();
+    image = MinHashMap.op();
+    animation = MinHashMap.op();
+    sound = MinHashMap.op();
+
     play_time = 1000 / fps;
     gl = canvas.getContext("webgl");
     webgl_op();
-
     s1 = SuuImage.op(200, 200, 100, 100, 1, 1,"image/lightblueflower.JPG");
+    screen.put("new",s1);
     // s2 = SuuImage.op(0, 0, 180, 180, 5, 5,"image/tx.png");
 
     setInterval("webgl_play();", play_time);
