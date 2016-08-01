@@ -3,6 +3,9 @@ var screen;
 var image;
 var animation;
 var sound;
+var unused_texture;
+
+var load_image;
 
 var webgl_width;
 var webgl_height;
@@ -53,77 +56,119 @@ var MinHashMap = {
 }
 
 var SuuImage = {
-    op: function(x, y, width, height, divideX, divideY, image_path){
+    op: function (image_path) {
         var suuImage = {};
-        //SuuActor-variable
-        suuImage.x = x;
-        suuImage.y = y;
-        suuImage.width = width;
-        suuImage.height = height;
-        suuImage.divideX = divideX;
-        suuImage.divideY = divideY;
-        suuImage.chooseX = 1;
-        suuImage.chooseY = 1;
-        suuImage.alpha = 1;
+        //SuuImage-variable
         suuImage.image = new Image();
         suuImage.texture;
-
-        suuImage.image.onload = function(){
-            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-            suuImage.texture = gl.createTexture();
-            gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, suuImage.texture);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, suuImage.image);
-            gl.generateMipmap(gl.TEXTURE_2D);
-            gl.uniform1i(texture, 0);
+        if (!image.containskey(image_path)) {
+            suuImage.image.onload = function () {
+                gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+                suuImage.texture = gl.createTexture();
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, suuImage.texture);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, suuImage.image);
+                gl.generateMipmap(gl.TEXTURE_2D);
+                gl.uniform1i(texture, 0);
+                suuImage.image = null;
+                image.put(image_path, suuImage.texture);
+            }
+            suuImage.image.src = image_path;
         }
-        suuImage.image.src = image_path;
+    },
+    unused_op: function (image_path,unused_texture) {
+        alert("s");
+        var suuImage = {};
+        //SuuImage-variable
+        suuImage.image = new Image();
+        suuImage.texture = unused_texture;
+        if (!image.containskey(image_path)) {
+            suuImage.image.onload = function () {
+                gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, suuImage.texture);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, suuImage.image);
+                gl.generateMipmap(gl.TEXTURE_2D);
+                gl.uniform1i(texture, 0);
+                suuImage.image = null;
+                image.put(image_path, suuImage.texture);
+            }
+            suuImage.image.src = image_path;
+        }
+    }
+}
+
+var SuuActor = {
+    op: function (x, y, width, height, divideX, divideY, image_path){
+        var suuActor = {};
+        //SuuActor-variable
+        suuActor.x = x;
+        suuActor.y = y;
+        suuActor.width = width;
+        suuActor.height = height;
+        suuActor.divideX = divideX;
+        suuActor.divideY = divideY;
+        suuActor.chooseX = 1;
+        suuActor.chooseY = 1;
+        suuActor.alpha = 1;
+        suuActor.image = new Image();
+
+        if (unused_texture.length > 0){
+            SuuImage.unused_op(image_path,unused_texture.pop());
+        } else {
+            SuuImage.op(image_path);
+        }
+
         //SuuActor-function
-        suuImage.play = function(){
-            suuImage.position_update();
-            suuImage.texcoord_update();
-            suuImage.color_update();
-            gl.bindTexture(gl.TEXTURE_2D, suuImage.texture);
+        suuActor.play = function(){
+            suuActor.position_update();
+            suuActor.texcoord_update();
+            suuActor.color_update();
+            gl.bindTexture(gl.TEXTURE_2D, image.get(image_path));
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
-        suuImage.position_update = function () {
-            gl.uniform4f(mposition, suuImage.width * 2, suuImage.height * 2, 1, 1);
-            gl.uniform4f(tposition, suuImage.x * 2 / webgl_width - 1, suuImage.y * 2 / webgl_height - 1, 0, 0);
+        suuActor.position_update = function () {
+            gl.uniform4f(mposition, suuActor.width * 2, suuActor.height * 2, 1, 1);
+            gl.uniform4f(tposition, suuActor.x * 2 / webgl_width - 1, suuActor.y * 2 / webgl_height - 1, 0, 0);
         }
-        suuImage.texcoord_update = function () {
-            gl.uniform2f(mtexcoord, 1 / suuImage.divideX, 1 / suuImage.divideY);
-            gl.uniform2f(ttexcoord, (suuImage.chooseX - 1) / suuImage.divideX, (suuImage.chooseY - 1) / suuImage.divideY);
+        suuActor.texcoord_update = function () {
+            gl.uniform2f(mtexcoord, 1 / suuActor.divideX, 1 / suuActor.divideY);
+            gl.uniform2f(ttexcoord, (suuActor.chooseX - 1) / suuActor.divideX, (suuActor.chooseY - 1) / suuActor.divideY);
         }
-        suuImage.color_update = function () {
-            gl.uniform4f(color, 1, 1, 1, suuImage.alpha);
+        suuActor.color_update = function () {
+            gl.uniform4f(color, 1, 1, 1, suuActor.alpha);
         }
-        suuImage.setxy = function (x, y) {
-            suuImage.x = x;
-            suuImage.y = y;
+        suuActor.setxy = function (x, y) {
+            suuActor.x = x;
+            suuActor.y = y;
         }
-        suuImage.inactor = function (x, y) {
-            if(x >= suuImage.x && x <= suuImage.x + suuImage.width &&
-                y >= suuImage.y && y <= suuImage.y + suuImage.height) {
+        suuActor.inactor = function (x, y) {
+            if(x >= suuActor.x && x <= suuActor.x + suuActor.width &&
+                y >= suuActor.y && y <= suuActor.y + suuActor.height) {
                 return true;
             }
             return false;
         }
-        suuImage.update = function () {
-            suuImage.chooseX ++;
-            if (suuImage.chooseX > suuImage.divideX && suuImage.chooseY < suuImage.divideY){
-                suuImage.chooseX = 1;
-                suuImage.chooseY ++;
-            } else if (suuImage.chooseX > suuImage.divideX && suuImage.chooseY == suuImage.divideY){
-                suuImage.chooseX = 1;
-                suuImage.chooseY = 1;
+        suuActor.update = function () {
+            suuActor.chooseX ++;
+            if (suuActor.chooseX > suuActor.divideX && suuActor.chooseY < suuActor.divideY){
+                suuActor.chooseX = 1;
+                suuActor.chooseY ++;
+            } else if (suuActor.chooseX > suuActor.divideX && suuActor.chooseY == suuActor.divideY){
+                suuActor.chooseX = 1;
+                suuActor.chooseY = 1;
             }
-            suuImage.texcoord_update();
+            suuActor.texcoord_update();
         }
-        return suuImage;
+        return suuActor;
     }
 };
 //----------webgl----------//
@@ -209,12 +254,16 @@ function webgl_op(){
 }
 
 function webgl_play(){
-    // screen.get("new").update();
-    // s1.update();
-    gl.clearColor(0, 0, 0, 1);
+    for(var key in screen.obj){
+        screen.get(key).update();
+    }
+
+    gl.clearColor(0.5, 0.5, 0.5, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    screen.get("new").play();
-    // s1.play();
+
+    for(var key in screen.obj){
+        screen.get(key).play();
+    }
 
     fps ++;
     date = new Date();
@@ -231,7 +280,6 @@ function webgl_play(){
 
 //----------function----------//
 var s1;
-// var s2;
 var date;
 var second = 0;
 var fps = 0;
@@ -248,13 +296,15 @@ function op(canvas, width, height, fps){
     image = MinHashMap.op();
     animation = MinHashMap.op();
     sound = MinHashMap.op();
+    unused_texture = new Array();
 
     play_time = 1000 / fps;
     gl = canvas.getContext("webgl");
     webgl_op();
-    s1 = SuuImage.op(200, 200, 100, 100, 1, 1,"image/lightblueflower.JPG");
-    screen.put("new",s1);
-    // s2 = SuuImage.op(0, 0, 180, 180, 5, 5,"image/tx.png");
+    screen.put("new1",SuuActor.op(200, 200, 100, 100, 1, 1,"image/lightblueflower.JPG"));
+    screen.put("new",SuuActor.op(200, 200, 100, 100, 8, 4,"image/xxyd.png"));
+    screen.put("new2",SuuActor.op(0, 0, 100, 100, 5, 4,"image/robin.png"));
+    // s2 = SuuActor.op(0, 0, 180, 180, 5, 5,"image/tx.png");
 
     setInterval("webgl_play();", play_time);
 }
@@ -268,9 +318,9 @@ function addevent(canvas){
         x = e.clientX;
         y = webgl_height - e.clientY;
         document.getElementById("operationMsg").innerHTML ="mousedown:" + x + "," + y;
-        if (s1.inactor(x,y)){
-            sx = x - s1.x;
-            sy = y - s1.y;
+        if (screen.get("new").inactor(x,y)){
+            sx = x - screen.get("new").x;
+            sy = y - screen.get("new").y;
             flag  = true;
         }
     },false);
@@ -279,7 +329,7 @@ function addevent(canvas){
         y = webgl_height - e.clientY;
         document.getElementById("operationMsg").innerHTML ="mousemove:" + x + "," + y;
         if (flag){
-            s1.setxy(x-sx,y-sy);
+            screen.get("new").setxy(x-sx,y-sy);
         }
     },false);
     canvas.addEventListener("mouseup",function (e) {
