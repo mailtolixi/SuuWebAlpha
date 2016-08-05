@@ -5,8 +5,6 @@ var animation;
 var sound;
 var unused_texture;
 
-var load_image;
-
 var webgl_width;
 var webgl_height;
 var play_time;
@@ -26,6 +24,7 @@ var color;
 var MinHashMap = {
     op: function () {
         var minHashMap = {};
+
         //MinHashMap-variable
         minHashMap.obj = new Object();
         minHashMap.size = 0;
@@ -37,16 +36,15 @@ var MinHashMap = {
         minHashMap.put = function (key, value) {
             if (!minHashMap.containskey(key)){
                 minHashMap.size ++;
-            } else {
-                return;
             }
             minHashMap.obj[key] = value;
         }
-        minHashMap.get=function(key){
-            return minHashMap.containskey(key)?minHashMap.obj[key]:null;
+        minHashMap.get = function (key){
+            return minHashMap.obj[key];
         }
-        minHashMap.remove=function(key){
-            if(minHashMap.containsKey(key)&&(delete minHashMap.obj[key])){
+
+        minHashMap.remove = function (key){
+            if(minHashMap.containskey(key)&&(delete minHashMap.obj[key])){
                 minHashMap.size --;
             }
         };
@@ -55,9 +53,62 @@ var MinHashMap = {
     }
 }
 
+var MinLinkedHashMap = {
+    op: function () {
+        //Extend MinHashMap
+        var minLinkedHashMap = MinHashMap.op();
+
+        //MinLinkedHashMap-variable
+        minLinkedHashMap.op_key;
+        minLinkedHashMap.ed_key;
+
+        //MinLinkedHashMap-function
+        minLinkedHashMap.put = function (key, value) {
+            if (!minLinkedHashMap.containskey(key)){
+                minLinkedHashMap.obj[key] = {};
+                if (minLinkedHashMap.size == 0) {
+                    minLinkedHashMap.op_key = key;
+                } else if (minLinkedHashMap.size > 0) {
+                    minLinkedHashMap.obj[minLinkedHashMap.ed_key].next = key;
+                    minLinkedHashMap.obj[key].last = minLinkedHashMap.ed_key;
+                }
+                minLinkedHashMap.ed_key = key;
+                minLinkedHashMap.size ++;
+            }
+            minLinkedHashMap.obj[key].value = value;
+        }
+        minLinkedHashMap.get = function (key){
+            return minLinkedHashMap.obj[key].value;
+        }
+        minLinkedHashMap.getlast = function (key){
+            minLinkedHashMap.op_key = minLinkedHashMap.obj[key].last;
+            return minLinkedHashMap.obj[key].value;
+        }
+        minLinkedHashMap.getnext = function (key){
+            minLinkedHashMap.ed_key = minLinkedHashMap.obj[key].next;
+            return minLinkedHashMap.obj[key].value;
+        }
+        minLinkedHashMap.remove = function (key) {
+            if (minLinkedHashMap.containskey(key)) {
+                if (minLinkedHashMap.containskey(minLinkedHashMap.obj[key].last)) {
+                    minLinkedHashMap.obj[minLinkedHashMap.obj[key].last].next = minLinkedHashMap.obj[key].next;
+                }
+                if (minLinkedHashMap.containskey(minLinkedHashMap.obj[key].next)) {
+                    minLinkedHashMap.obj[minLinkedHashMap.obj[key].next].last = minLinkedHashMap.obj[key].last;
+                }
+                delete minLinkedHashMap.obj[key];
+                minLinkedHashMap.size --;
+            }
+        }
+
+        return minLinkedHashMap;
+    }
+}
+
 var SuuImage = {
     op: function (image_path) {
         var suuImage = {};
+
         //SuuImage-variable
         suuImage.image = new Image();
         suuImage.texture;
@@ -83,6 +134,7 @@ var SuuImage = {
     unused_op: function (image_path,unused_texture) {
         alert("s");
         var suuImage = {};
+
         //SuuImage-variable
         suuImage.image = new Image();
         suuImage.texture = unused_texture;
@@ -109,6 +161,7 @@ var SuuImage = {
 var SuuActor = {
     op: function (x, y, width, height, divideX, divideY, image_path){
         var suuActor = {};
+
         //SuuActor-variable
         suuActor.x = x;
         suuActor.y = y;
@@ -254,15 +307,17 @@ function webgl_op(){
 }
 
 function webgl_play(){
-    for(var key in screen.obj){
-        screen.get(key).update();
+    screen.ed_key = screen.op_key;
+    for(var i = 0; i < screen.size; i++){
+        screen.getnext(screen.ed_key).update();
     }
 
     gl.clearColor(0.5, 0.5, 0.5, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    for(var key in screen.obj){
-        screen.get(key).play();
+    screen.ed_key = screen.op_key;
+    for(var i = 0; i < screen.size; i++){
+        screen.getnext(screen.ed_key).play();
     }
 
     fps ++;
@@ -292,19 +347,18 @@ function op(canvas, width, height, fps){
     canvas.height = height;
     webgl_width = width;
     webgl_height = height;
-    screen = MinHashMap.op();
+    screen = MinLinkedHashMap.op();
     image = MinHashMap.op();
-    animation = MinHashMap.op();
-    sound = MinHashMap.op();
+    animation = MinLinkedHashMap.op();
+    sound = MinLinkedHashMap.op();
     unused_texture = new Array();
 
     play_time = 1000 / fps;
     gl = canvas.getContext("webgl");
     webgl_op();
-    screen.put("new1",SuuActor.op(200, 200, 100, 100, 1, 1,"image/lightblueflower.JPG"));
-    screen.put("new",SuuActor.op(200, 200, 100, 100, 8, 4,"image/xxyd.png"));
-    screen.put("new2",SuuActor.op(0, 0, 100, 100, 5, 4,"image/robin.png"));
-    // s2 = SuuActor.op(0, 0, 180, 180, 5, 5,"image/tx.png");
+    screen.put("3",SuuActor.op(200, 200, 100, 100, 1, 1,"image/lightblueflower.JPG"));
+    screen.put("2",SuuActor.op(0, 0, 100, 100, 5, 4,"image/robin.png"));
+    screen.put("1",SuuActor.op(300, 300, 100, 100, 8, 4,"image/xxyd.png"));
 
     setInterval("webgl_play();", play_time);
 }
@@ -318,9 +372,9 @@ function addevent(canvas){
         x = e.clientX;
         y = webgl_height - e.clientY;
         document.getElementById("operationMsg").innerHTML ="mousedown:" + x + "," + y;
-        if (screen.get("new").inactor(x,y)){
-            sx = x - screen.get("new").x;
-            sy = y - screen.get("new").y;
+        if (screen.get("1").inactor(x,y)){
+            sx = x - screen.get("1").x;
+            sy = y - screen.get("1").y;
             flag  = true;
         }
     },false);
@@ -329,7 +383,7 @@ function addevent(canvas){
         y = webgl_height - e.clientY;
         document.getElementById("operationMsg").innerHTML ="mousemove:" + x + "," + y;
         if (flag){
-            screen.get("new").setxy(x-sx,y-sy);
+            screen.get("1").setxy(x-sx,y-sy);
         }
     },false);
     canvas.addEventListener("mouseup",function (e) {
