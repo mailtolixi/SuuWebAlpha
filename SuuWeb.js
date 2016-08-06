@@ -107,12 +107,12 @@ var MinLinkedHashMap = {
 
 var SuuImage = {
     op: function (image_path) {
-        var suuImage = {};
 
-        //SuuImage-variable
-        suuImage.image = new Image();
-        suuImage.texture;
         if (!image.containskey(image_path)) {
+            var suuImage = {};
+            suuImage.image = new Image();
+            suuImage.texture;
+
             suuImage.image.onload = function () {
                 gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
                 suuImage.texture = gl.createTexture();
@@ -131,14 +131,12 @@ var SuuImage = {
             suuImage.image.src = image_path;
         }
     },
-    unused_op: function (image_path,unused_texture) {
-        alert("s");
-        var suuImage = {};
-
-        //SuuImage-variable
-        suuImage.image = new Image();
-        suuImage.texture = unused_texture;
+    unused_op: function (image_path, unused_texture) {
         if (!image.containskey(image_path)) {
+            var suuImage = {};
+            suuImage.image = new Image();
+            suuImage.texture = unused_texture;
+
             suuImage.image.onload = function () {
                 gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
                 gl.activeTexture(gl.TEXTURE0);
@@ -155,6 +153,98 @@ var SuuImage = {
             }
             suuImage.image.src = image_path;
         }
+    },
+    text_op: function (key, text, width, height, font_size, font_color) {
+        var suuImage = {};
+        suuImage.image = document.createElement("canvas");
+        suuImage.texture;
+
+        var lines = new Array();
+        var line = "";
+        var ctx = suuImage.image.getContext("2d");
+        suuImage.image.width = width;
+        suuImage.image.height = height;
+        ctx.font = font_size + "px 宋体";
+        ctx.fillStyle = font_color;
+
+
+        for (var i = 0; i < text.length; i++){
+            if (ctx.measureText(line + text.substring(i, i+1)).width > width) {
+                lines.push(line);
+                line = "";
+            }
+            line += text.substring(i, i+1);
+        }
+        if (line != ""){
+            lines.push(line);
+        }
+        line = null;
+
+        for (var i = lines.length; i > 0; i--) {
+            ctx.fillText(lines.pop(), 0, font_size * (i + 1));
+        }
+
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        if (image.containskey(key)) {
+            suuImage.texture = image.get(key);
+        } else {
+            suuImage.texture = gl.createTexture();
+        }
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, suuImage.texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, suuImage.image);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.uniform1i(texture, 0);
+        suuImage.image = null;
+        image.put(key, suuImage.texture);
+    },
+    unused_text_op: function (key, text, width, height, font_size, font_color, unused_texture) {
+        var suuImage = {};
+        suuImage.image = document.createElement("canvas");
+        suuImage.texture;
+
+        var lines = new Array();
+        var line = "";
+        var ctx = suuImage.image.getContext("2d");
+        suuImage.image.width = width;
+        suuImage.image.height = height;
+        ctx.font = font_size + "px 宋体";
+        ctx.fillStyle = font_color;
+
+
+        for (var i = 0; i < text.length; i++){
+            if (ctx.measureText(line + text.substring(i, i+1)).width > width) {
+                lines.push(line);
+                line = "";
+            }
+            line += text.substring(i, i+1);
+        }
+        if (line != ""){
+            lines.push(line);
+        }
+        line = null;
+
+        for (var i = lines.length; i > 0; i--) {
+            ctx.fillText(lines.pop(), 0, font_size * (i + 1));
+        }
+
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        suuImage.texture = unused_texture;
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, suuImage.texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, suuImage.image);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.uniform1i(texture, 0);
+        suuImage.image = null;
+        image.put(key, suuImage.texture);
     }
 }
 
@@ -169,15 +259,15 @@ var SuuActor = {
         suuActor.height = height;
         suuActor.divideX = divideX;
         suuActor.divideY = divideY;
+        suuActor.key = image_path;
         suuActor.chooseX = 1;
         suuActor.chooseY = 1;
         suuActor.alpha = 1;
-        suuActor.image = new Image();
 
         if (unused_texture.length > 0){
-            SuuImage.unused_op(image_path,unused_texture.pop());
+            SuuImage.unused_op(suuActor.key, unused_texture.pop());
         } else {
-            SuuImage.op(image_path);
+            SuuImage.op(suuActor.key, 0, 0, 0);
         }
 
         //SuuActor-function
@@ -185,7 +275,7 @@ var SuuActor = {
             suuActor.position_update();
             suuActor.texcoord_update();
             suuActor.color_update();
-            gl.bindTexture(gl.TEXTURE_2D, image.get(image_path));
+            gl.bindTexture(gl.TEXTURE_2D, image.get(suuActor.key));
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
         suuActor.position_update = function () {
@@ -220,6 +310,61 @@ var SuuActor = {
                 suuActor.chooseY = 1;
             }
             suuActor.texcoord_update();
+        }
+        return suuActor;
+    },
+    text_op: function (x, y, width, height, font_size, font_color, text, key){
+        var suuActor = {};
+
+        //SuuActor-variable
+        suuActor.x = x;
+        suuActor.y = y;
+        suuActor.width = width;
+        suuActor.height = height;
+        suuActor.alpha = 1;
+        suuActor.key = key;
+
+        if (unused_texture.length > 0){
+            SuuImage.unused_text_op(suuActor.key, text, width, height, font_size, font_color, unused_texture.pop());
+        } else {
+            SuuImage.text_op(suuActor.key, text, width, height, font_size, font_color);
+        }
+
+        //SuuActor-function
+        suuActor.play = function(){
+            suuActor.position_update();
+            suuActor.texcoord_update();
+            suuActor.color_update();
+            gl.bindTexture(gl.TEXTURE_2D, image.get(suuActor.key));
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        }
+        suuActor.position_update = function () {
+            gl.uniform4f(mposition, suuActor.width * 2, suuActor.height * 2, 1, 1);
+            gl.uniform4f(tposition, suuActor.x * 2 / webgl_width - 1, suuActor.y * 2 / webgl_height - 1, 0, 0);
+        }
+        suuActor.texcoord_update = function () {
+            gl.uniform2f(mtexcoord, 1, 1);
+            gl.uniform2f(ttexcoord, 0, 0);
+        }
+        suuActor.color_update = function () {
+            gl.uniform4f(color, 1, 1, 1, suuActor.alpha);
+        }
+        suuActor.setxy = function (x, y) {
+            suuActor.x = x;
+            suuActor.y = y;
+        }
+        suuActor.inactor = function (x, y) {
+            if(x >= suuActor.x && x <= suuActor.x + suuActor.width &&
+                y >= suuActor.y && y <= suuActor.y + suuActor.height) {
+                return true;
+            }
+            return false;
+        }
+        suuActor.update = function () {
+        }
+        suuActor.settext = function (text) {
+            suuActor.text = text;
+            SuuImage.text_op(suuActor.key, text, width, height, font_size, font_color);
         }
         return suuActor;
     }
@@ -334,7 +479,6 @@ function webgl_play(){
 }
 
 //----------function----------//
-var s1;
 var date;
 var second = 0;
 var fps = 0;
@@ -356,10 +500,9 @@ function op(canvas, width, height, fps){
     play_time = 1000 / fps;
     gl = canvas.getContext("webgl");
     webgl_op();
-    screen.put("3",SuuActor.op(200, 200, 100, 100, 1, 1,"image/lightblueflower.JPG"));
-    screen.put("2",SuuActor.op(0, 0, 100, 100, 5, 4,"image/robin.png"));
-    screen.put("1",SuuActor.op(300, 300, 100, 100, 8, 4,"image/xxyd.png"));
-
+    screen.put("1",SuuActor.text_op(0, 0, 640, 300, 50, "#FF00FF", "111", "key"));
+    // screen.put("2",SuuActor.op(0, 0, 100, 100, 5, 4,"image/robin.png"));
+    // screen.put("1",SuuActor.op(300, 300, 100, 100, 8, 4,"image/xxyd.png"));
     setInterval("webgl_play();", play_time);
 }
 var sx = 0;
