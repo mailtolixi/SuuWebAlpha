@@ -203,10 +203,7 @@ var SuuActor = {
             ]);
         }
 
-        suuActor.texcoord_update = function () {
-            gl.uniform2f(mtexcoord, 1, 1);
-            gl.uniform2f(ttexcoord, 0, 0);
-        }
+
         suuActor.color_update = function () {
             gl.uniform4f(color, 1, 1, 1, suuActor.alpha);
         }
@@ -248,10 +245,6 @@ var SuuActor = {
         }
 
         //SuuActor-function
-        suuActor.position_update = function () {
-            gl.uniform4f(mposition, suuActor.width * 2, suuActor.height * 2, 1, 1);
-            gl.uniform4f(tposition, suuActor.x * 2 / webgl_width - 1, suuActor.y * 2 / webgl_height - 1, 0, 0);
-        }
         suuActor.texcoord_update = function () {
             gl.uniform2f(mtexcoord, 1 / suuActor.divideX, 1 / suuActor.divideY);
             gl.uniform2f(ttexcoord, (Math.ceil(suuActor.chooseX/5) - 1) / suuActor.divideX, (suuActor.chooseY - 1) / suuActor.divideY);
@@ -283,6 +276,10 @@ var SuuActor = {
         }
 
         //SuuActor-function
+        suuActor.texcoord_update = function () {
+            gl.uniform2f(mtexcoord, 1, 1);
+            gl.uniform2f(ttexcoord, 0, 0);
+        }
         suuActor.settext = function (text) {
             suuActor.text = text;
             SuuImage.text_op(image.get(suuActor.key), suuActor.key, text, width, height, font_size, font_color);
@@ -291,6 +288,46 @@ var SuuActor = {
         return suuActor;
     }
 };
+var SuuAnimation = {
+    op: function (actor, x, y, width, height, rotate, alpha, fps) {
+        var suuAnimation = {};
+
+        //SuuActor-variable
+        suuAnimation.actor = actor;
+        suuAnimation.x = x;
+        suuAnimation.y = y;
+        suuAnimation.width = width;
+        suuAnimation.height = height;
+        suuAnimation.rotate = rotate;
+        suuAnimation.alpha = alpha;
+        suuAnimation.fps = fps;
+
+        //SuuActor-function
+        suuAnimation.play = function () {
+            if (suuAnimation.fps == 0) {
+                screen.get(suuAnimation.actor).x = suuAnimation.x;
+                screen.get(suuAnimation.actor).y = suuAnimation.y;
+                screen.get(suuAnimation.actor).width = suuAnimation.width;
+                screen.get(suuAnimation.actor).height = suuAnimation.height;
+                screen.get(suuAnimation.actor).rotate = suuAnimation.rotate;
+                screen.get(suuAnimation.actor).alpha = suuAnimation.alpha;
+
+                animation.remove(suuAnimation.actor);
+            } else {
+                screen.get(suuAnimation.actor).x += (suuAnimation.x - screen.get(suuAnimation.actor).x) / suuAnimation.fps;
+                screen.get(suuAnimation.actor).y += (suuAnimation.y - screen.get(suuAnimation.actor).y) / suuAnimation.fps;
+                screen.get(suuAnimation.actor).width += (suuAnimation.width - screen.get(suuAnimation.actor).width) / suuAnimation.fps;
+                screen.get(suuAnimation.actor).height += (suuAnimation.height - screen.get(suuAnimation.actor).height) / suuAnimation.fps;
+                screen.get(suuAnimation.actor).rotate += (suuAnimation.rotate - screen.get(suuAnimation.actor).rotate) / suuAnimation.fps;
+                screen.get(suuAnimation.actor).alpha += (suuAnimation.alpha - screen.get(suuAnimation.actor).alpha) / suuAnimation.fps;
+                suuAnimation.fps --;
+            }
+            screen.get(suuAnimation.actor).position_update();
+        }
+
+        animation.put(suuAnimation.actor, suuAnimation);
+    }
+}
 //----------webgl----------//
 function webgl_op(){
     gl.viewport(0, 0, webgl_width, webgl_height);
@@ -374,8 +411,12 @@ function webgl_op(){
 }
 
 function webgl_play(){
+    for (var key in animation.obj) {
+        animation.get(key).play();
+    }
+
     screen.ed_key = screen.op_key;
-    for(var i = 0; i < screen.size; i++){
+    for (var i = 0; i < screen.size; i++) {
         screen.getnext(screen.ed_key).update();
     }
 
@@ -383,7 +424,7 @@ function webgl_play(){
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     screen.ed_key = screen.op_key;
-    for(var i = 0; i < screen.size; i++){
+    for (var i = 0; i < screen.size; i++) {
         screen.getnext(screen.ed_key).play();
     }
 
@@ -415,7 +456,7 @@ function op(canvas, width, height, fps){
     webgl_height = height;
     screen = MinLinkedHashMap.op();
     image = MinHashMap.op();
-    animation = MinLinkedHashMap.op();
+    animation = MinHashMap.op();
     sound = MinLinkedHashMap.op();
     unused_texture = new Array();
 
@@ -425,6 +466,7 @@ function op(canvas, width, height, fps){
     screen.put("1",SuuActor.text_op(100, 100, 300, 50, 20, "#FF00FF", "11sssssssssssss1", "key"));
     // screen.put("2",SuuActor.op(0, 0, 100, 100, 5, 4,"image/robin.png"));
     screen.put("2",SuuActor.op(0, 0, 100, 100, 8, 4,"image/xxyd.png"));
+    SuuAnimation.op("1", 200, 200, 600, 100, 0, 0, 75);
     setInterval("webgl_play();", play_time);
 }
 var sx = 0;
