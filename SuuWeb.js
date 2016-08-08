@@ -184,12 +184,15 @@ var SuuActor = {
 
         //SuuActor-function
         suuActor.play = function(){
-            gl.uniformMatrix4fv(mposition, false, suuActor.matrix);
-            gl.uniform4f(tposition, suuActor.x * 2 / webgl_width - 1, suuActor.y * 2 / webgl_height - 1, 0, 0);
-            suuActor.texcoord_update();
-            suuActor.color_update();
-            gl.bindTexture(gl.TEXTURE_2D, image.get(suuActor.key));
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            if (suuActor.x < webgl_width && suuActor.y < webgl_height &&
+                -suuActor.x < suuActor.width && -suuActor.y < suuActor.height ) {
+                gl.uniformMatrix4fv(mposition, false, suuActor.matrix);
+                gl.uniform4f(tposition, suuActor.x * 2 / webgl_width - 1, suuActor.y * 2 / webgl_height - 1, 0, 0);
+                suuActor.texcoord_update();
+                suuActor.color_update();
+                gl.bindTexture(gl.TEXTURE_2D, image.get(suuActor.key));
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            }
         }
 
         suuActor.position_update = function () {
@@ -289,7 +292,7 @@ var SuuActor = {
     }
 };
 var SuuAnimation = {
-    op: function (actor, x, y, width, height, rotate, alpha, fps) {
+    op: function (actor, x, y, width, height, angle, alpha, fps) {
         var suuAnimation = {};
 
         //SuuActor-variable
@@ -298,7 +301,7 @@ var SuuAnimation = {
         suuAnimation.y = y;
         suuAnimation.width = width;
         suuAnimation.height = height;
-        suuAnimation.rotate = rotate;
+        suuAnimation.angle = angle;
         suuAnimation.alpha = alpha;
         suuAnimation.fps = fps;
 
@@ -309,23 +312,26 @@ var SuuAnimation = {
                 screen.get(suuAnimation.actor).y = suuAnimation.y;
                 screen.get(suuAnimation.actor).width = suuAnimation.width;
                 screen.get(suuAnimation.actor).height = suuAnimation.height;
-                screen.get(suuAnimation.actor).rotate = suuAnimation.rotate;
+                screen.get(suuAnimation.actor).angle = suuAnimation.angle;
                 screen.get(suuAnimation.actor).alpha = suuAnimation.alpha;
-
-                animation.remove(suuAnimation.actor);
+                suuAnimation.ed();
             } else {
                 screen.get(suuAnimation.actor).x += (suuAnimation.x - screen.get(suuAnimation.actor).x) / suuAnimation.fps;
                 screen.get(suuAnimation.actor).y += (suuAnimation.y - screen.get(suuAnimation.actor).y) / suuAnimation.fps;
                 screen.get(suuAnimation.actor).width += (suuAnimation.width - screen.get(suuAnimation.actor).width) / suuAnimation.fps;
                 screen.get(suuAnimation.actor).height += (suuAnimation.height - screen.get(suuAnimation.actor).height) / suuAnimation.fps;
-                screen.get(suuAnimation.actor).rotate += (suuAnimation.rotate - screen.get(suuAnimation.actor).rotate) / suuAnimation.fps;
+                screen.get(suuAnimation.actor).angle += (suuAnimation.angle - screen.get(suuAnimation.actor).angle) / suuAnimation.fps;
                 screen.get(suuAnimation.actor).alpha += (suuAnimation.alpha - screen.get(suuAnimation.actor).alpha) / suuAnimation.fps;
                 suuAnimation.fps --;
             }
             screen.get(suuAnimation.actor).position_update();
         }
 
-        animation.put(suuAnimation.actor, suuAnimation);
+        suuAnimation.ed = function () {
+            animation.remove(suuAnimation.actor);
+        }
+
+        return suuAnimation;
     }
 }
 //----------webgl----------//
@@ -463,15 +469,13 @@ function op(canvas, width, height, fps){
     play_time = 1000 / fps;
     gl = canvas.getContext("webgl");
     webgl_op();
-    screen.put("1",SuuActor.text_op(100, 100, 300, 50, 20, "#FF00FF", "11sssssssssssss1", "key"));
-    // screen.put("2",SuuActor.op(0, 0, 100, 100, 5, 4,"image/robin.png"));
-    screen.put("2",SuuActor.op(0, 0, 100, 100, 8, 4,"image/xxyd.png"));
-    SuuAnimation.op("1", 200, 200, 600, 100, 0, 0, 75);
+    // screen.put("1",SuuActor.text_op(100, 100, 300, 50, 20, "#FF00FF", "11sssssssssssss1", "key"));
+    // // screen.put("2",SuuActor.op(0, 0, 100, 100, 5, 4,"image/robin.png"));
+    // screen.put("2",SuuActor.op(0, 0, 100, 100, 8, 4,"image/xxyd.png"));
+
     setInterval("webgl_play();", play_time);
 }
-var sx = 0;
-var sy = 0;
-var flag = false;
+
 //加载点击和触摸事件
 function addevent(canvas){
     var x,y;
@@ -479,40 +483,49 @@ function addevent(canvas){
         x = e.clientX;
         y = webgl_height - e.clientY;
         document.getElementById("operationMsg").innerHTML ="mousedown:" + x + "," + y;
-        if (screen.get("1").inactor(x,y)){
-            sx = x - screen.get("1").x;
-            sy = y - screen.get("1").y;
-            flag  = true;
-        }
+        down(x, y);
     },false);
     canvas.addEventListener("mousemove",function (e) {
         x = e.clientX;
         y = webgl_height - e.clientY;
         document.getElementById("operationMsg").innerHTML ="mousemove:" + x + "," + y;
-        if (flag){
-            screen.get("1").setxy(x-sx,y-sy);
-        }
+        move(x, y);
     },false);
     canvas.addEventListener("mouseup",function (e) {
         x = e.clientX;
         y = webgl_height - e.clientY;
         document.getElementById("operationMsg").innerHTML ="mouseup:" + x + "," + y;
-        flag = false;
+        up(x, y);
     },false);
 
     canvas.addEventListener("touchstart",function (e) {
         x = e.touches[0].clientX;
         y = webgl_height - Math.floor(e.touches[0].clientY);
         document.getElementById("operationMsg").innerHTML ="touchstart:" + x + "," + y;
+        down(x, y);
     },false);
     canvas.addEventListener("touchmove",function (e) {
         x = e.pageX;
         y = webgl_height - Math.floor(e.touches[0].clientY);
         document.getElementById("operationMsg").innerHTML ="touchmove:" + x + "," + y;
+        move(x, y);
     },false);
     canvas.addEventListener("touchend",function (e) {
         x = e.pageX;
         y = webgl_height - Math.floor(e.touches[0].clientY);
         document.getElementById("operationMsg").innerHTML ="touchend:" + x + "," + y;
+        up(x, y);
     },false);
+}
+
+function down(x, y) {
+    
+}
+
+function move(x, y) {
+    
+}
+
+function up(x, y) {
+    
 }
