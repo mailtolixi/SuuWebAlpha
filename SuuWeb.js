@@ -1,50 +1,66 @@
+//----------loadjs----------//
+// document.write(
+//     "<style type=\"text/css\">" +
+//     "   * {margin:0;padding:0}" +
+//     "   body,html,canvas {width:100%;height: 100%;overflow-y: hidden;}" +
+//     "</style>");
+document.write(
+    "<style type=\"text/css\">" +
+    "   * {margin:0;padding:0}" +
+    "   body,html,canvas {width:100%;height: 100%;}" +
+    "</style>");
 //----------variable----------//
-var screen;
-var image;
-var animation;
-var sound;
-var unused_texture;
-
-var webgl_width;
-var webgl_height;
-var play_time;
+var s_screen;
+var s_animation;
+var s_sound;
 
 var gl;
 
+var image_texture;
+var unused_texture;
+var event_actor;
+
+var webgl_width;
+var webgl_height;
+var window_width;
+var window_height;
+var play_time;
+
+
 //图像大小与位置
-var tposition;
-var mposition;
+var translate_position;
+var matrix_position;
 //纹理分割与选择
-var ttexcoord;
-var mtexcoord;
+var translate_texcoord;
+var scale_texcoord;
 //纹理贴图与颜色
-var texture;
-var color;
+var texture_object;
+var texture_color;
 //----------class----------//
 var MinHashMap = {
     op: function () {
         var minHashMap = {};
 
         //MinHashMap-variable
-        minHashMap.obj = new Object();
+        minHashMap.object = new Object();
         minHashMap.size = 0;
 
         //MinHashMap-function
         minHashMap.containskey = function (key) {
-            return (key in minHashMap.obj);
+            return (key in minHashMap.object);
         }
         minHashMap.put = function (key, value) {
             if (!minHashMap.containskey(key)){
                 minHashMap.size ++;
             }
-            minHashMap.obj[key] = value;
+            minHashMap.object[key] = value;
         }
         minHashMap.get = function (key){
-            return minHashMap.obj[key];
+            return minHashMap.object[key];
         }
 
         minHashMap.remove = function (key){
-            if(minHashMap.containskey(key)&&(delete minHashMap.obj[key])){
+            if(minHashMap.containskey(key)&&(delete minHashMap.object[key])){
                 minHashMap.size --;
             }
         };
@@ -65,38 +81,38 @@ var MinLinkedHashMap = {
         //MinLinkedHashMap-function
         minLinkedHashMap.put = function (key, value) {
             if (!minLinkedHashMap.containskey(key)){
-                minLinkedHashMap.obj[key] = {};
+                minLinkedHashMap.object[key] = {};
                 if (minLinkedHashMap.size == 0) {
                     minLinkedHashMap.op_key = key;
                 } else if (minLinkedHashMap.size > 0) {
-                    minLinkedHashMap.obj[minLinkedHashMap.ed_key].next = key;
-                    minLinkedHashMap.obj[key].last = minLinkedHashMap.ed_key;
+                    minLinkedHashMap.object[minLinkedHashMap.ed_key].next = key;
+                    minLinkedHashMap.object[key].last = minLinkedHashMap.ed_key;
                 }
                 minLinkedHashMap.ed_key = key;
                 minLinkedHashMap.size ++;
             }
-            minLinkedHashMap.obj[key].value = value;
+            minLinkedHashMap.object[key].value = value;
         }
         minLinkedHashMap.get = function (key){
-            return minLinkedHashMap.obj[key].value;
+            return minLinkedHashMap.object[key].value;
         }
         minLinkedHashMap.getlast = function (key){
-            minLinkedHashMap.op_key = minLinkedHashMap.obj[key].last;
-            return minLinkedHashMap.obj[key].value;
+            minLinkedHashMap.op_key = minLinkedHashMap.object[key].last;
+            return minLinkedHashMap.object[key].value;
         }
         minLinkedHashMap.getnext = function (key){
-            minLinkedHashMap.ed_key = minLinkedHashMap.obj[key].next;
-            return minLinkedHashMap.obj[key].value;
+            minLinkedHashMap.ed_key = minLinkedHashMap.object[key].next;
+            return minLinkedHashMap.object[key].value;
         }
         minLinkedHashMap.remove = function (key) {
             if (minLinkedHashMap.containskey(key)) {
-                if (minLinkedHashMap.containskey(minLinkedHashMap.obj[key].last)) {
-                    minLinkedHashMap.obj[minLinkedHashMap.obj[key].last].next = minLinkedHashMap.obj[key].next;
+                if (minLinkedHashMap.containskey(minLinkedHashMap.object[key].last)) {
+                    minLinkedHashMap.object[minLinkedHashMap.object[key].last].next = minLinkedHashMap.object[key].next;
                 }
-                if (minLinkedHashMap.containskey(minLinkedHashMap.obj[key].next)) {
-                    minLinkedHashMap.obj[minLinkedHashMap.obj[key].next].last = minLinkedHashMap.obj[key].last;
+                if (minLinkedHashMap.containskey(minLinkedHashMap.object[key].next)) {
+                    minLinkedHashMap.object[minLinkedHashMap.object[key].next].last = minLinkedHashMap.object[key].last;
                 }
-                delete minLinkedHashMap.obj[key];
+                delete minLinkedHashMap.object[key];
                 minLinkedHashMap.size --;
             }
         }
@@ -111,18 +127,23 @@ var SuuImage = {
         var image_op = new Image();
 
         image_op.onload = function () {
+            var suuImage = {};
+            suuImage.texture = texture_op;
+            suuImage.count = 1;
+
             gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
             gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, texture_op);
+            gl.bindTexture(gl.TEXTURE_2D, suuImage.texture);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image_op);
             gl.generateMipmap(gl.TEXTURE_2D);
-            gl.uniform1i(texture, 0);
+            gl.uniform1i(texture_object, 0);
             image_op = null;
-            image.put(image_path, texture_op);
+
+            image_texture.put(image_path, suuImage);
         }
         image_op.src = image_path;
     },
@@ -153,19 +174,22 @@ var SuuImage = {
         for (var i = lines.length; i > 0; i--) {
             ctx.fillText(lines.pop(), 0, font_size * (i + 1));
         }
+        var suuImage = {};
+        suuImage.texture = texture_op;
+        suuImage.count = 1;
 
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, texture_op);
+        gl.bindTexture(gl.TEXTURE_2D, suuImage.texture);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image_op);
         gl.generateMipmap(gl.TEXTURE_2D);
-        gl.uniform1i(texture, 0);
+        gl.uniform1i(texture_object, 0);
         image_op = null;
-        image.put(key, texture_op);
+        image_texture.put(key, suuImage);
     }
 }
 
@@ -186,11 +210,11 @@ var SuuActor = {
         suuActor.play = function(){
             if (suuActor.x < webgl_width && suuActor.y < webgl_height &&
                 -suuActor.x < suuActor.width && -suuActor.y < suuActor.height ) {
-                gl.uniformMatrix4fv(mposition, false, suuActor.matrix);
-                gl.uniform4f(tposition, suuActor.x * 2 / webgl_width - 1, suuActor.y * 2 / webgl_height - 1, 0, 0);
+                gl.uniformMatrix4fv(matrix_position, false, suuActor.matrix);
+                gl.uniform4f(translate_position, suuActor.x * 2 / webgl_width - 1, suuActor.y * 2 / webgl_height - 1, 0, 0);
                 suuActor.texcoord_update();
                 suuActor.color_update();
-                gl.bindTexture(gl.TEXTURE_2D, image.get(suuActor.key));
+                gl.bindTexture(gl.TEXTURE_2D, image_texture.get(suuActor.key).texture);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             }
         }
@@ -208,7 +232,7 @@ var SuuActor = {
 
 
         suuActor.color_update = function () {
-            gl.uniform4f(color, 1, 1, 1, suuActor.alpha);
+            gl.uniform4f(texture_color, 1, 1, 1, suuActor.alpha);
         }
         suuActor.setxy = function (x, y) {
             suuActor.x = x;
@@ -222,6 +246,18 @@ var SuuActor = {
             return false;
         }
         suuActor.update = function () {
+        }
+
+        suuActor.down = function () {
+
+        }
+
+        suuActor.move = function () {
+
+        }
+
+        suuActor.up = function () {
+
         }
 
         suuActor.position_update();
@@ -239,18 +275,20 @@ var SuuActor = {
         suuActor.chooseX = 1;
         suuActor.chooseY = 1;
 
-        if(!image.containskey(suuActor.key)) {
+        if(!image_texture.containskey(suuActor.key)) {
             if (unused_texture.length > 0) {
                 SuuImage.unused_op(unused_texture.pop(), suuActor.key);
             } else {
                 SuuImage.op(gl.createTexture(), suuActor.key);
             }
+        } else {
+            image_texture.get(suuActor.key).count ++;
         }
 
         //SuuActor-function
         suuActor.texcoord_update = function () {
-            gl.uniform2f(mtexcoord, 1 / suuActor.divideX, 1 / suuActor.divideY);
-            gl.uniform2f(ttexcoord, (Math.ceil(suuActor.chooseX/5) - 1) / suuActor.divideX, (suuActor.chooseY - 1) / suuActor.divideY);
+            gl.uniform2f(scale_texcoord, 1 / suuActor.divideX, 1 / suuActor.divideY);
+            gl.uniform2f(translate_texcoord, (Math.ceil(suuActor.chooseX/5) - 1) / suuActor.divideX, (suuActor.chooseY - 1) / suuActor.divideY);
         }
         suuActor.update = function () {
             suuActor.chooseX ++;
@@ -271,21 +309,23 @@ var SuuActor = {
         if (unused_texture.length > 0){
             SuuImage.text_op(unused_texture.pop(), suuActor.key, text, width, height, font_size, font_color);
         } else {
-            if (image.containskey(key)) {
-                SuuImage.text_op(image.get(suuActor.key), suuActor.key, text, width, height, font_size, font_color);
+            if (image_texture.containskey(key)) {
+                SuuImage.text_op(image_texture.get(suuActor.key).texture, suuActor.key, text, width, height, font_size, font_color);
             } else {
                 SuuImage.text_op(gl.createTexture(), suuActor.key, text, width, height, font_size, font_color);
             }
         }
 
+        // gl.deleteTexture(image_texture.get(suuActor.key).texture_object);
+
         //SuuActor-function
         suuActor.texcoord_update = function () {
-            gl.uniform2f(mtexcoord, 1, 1);
-            gl.uniform2f(ttexcoord, 0, 0);
+            gl.uniform2f(scale_texcoord, 1, 1);
+            gl.uniform2f(translate_texcoord, 0, 0);
         }
         suuActor.settext = function (text) {
             suuActor.text = text;
-            SuuImage.text_op(image.get(suuActor.key), suuActor.key, text, width, height, font_size, font_color);
+            SuuImage.text_op(image_texture.get(suuActor.key).texture, suuActor.key, text, width, height, font_size, font_color);
         }
 
         return suuActor;
@@ -308,27 +348,27 @@ var SuuAnimation = {
         //SuuActor-function
         suuAnimation.play = function () {
             if (suuAnimation.fps == 0) {
-                screen.get(suuAnimation.actor).x = suuAnimation.x;
-                screen.get(suuAnimation.actor).y = suuAnimation.y;
-                screen.get(suuAnimation.actor).width = suuAnimation.width;
-                screen.get(suuAnimation.actor).height = suuAnimation.height;
-                screen.get(suuAnimation.actor).angle = suuAnimation.angle;
-                screen.get(suuAnimation.actor).alpha = suuAnimation.alpha;
+                s_screen.get(suuAnimation.actor).x = suuAnimation.x;
+                s_screen.get(suuAnimation.actor).y = suuAnimation.y;
+                s_screen.get(suuAnimation.actor).width = suuAnimation.width;
+                s_screen.get(suuAnimation.actor).height = suuAnimation.height;
+                s_screen.get(suuAnimation.actor).angle = suuAnimation.angle;
+                s_screen.get(suuAnimation.actor).alpha = suuAnimation.alpha;
                 suuAnimation.ed();
             } else {
-                screen.get(suuAnimation.actor).x += (suuAnimation.x - screen.get(suuAnimation.actor).x) / suuAnimation.fps;
-                screen.get(suuAnimation.actor).y += (suuAnimation.y - screen.get(suuAnimation.actor).y) / suuAnimation.fps;
-                screen.get(suuAnimation.actor).width += (suuAnimation.width - screen.get(suuAnimation.actor).width) / suuAnimation.fps;
-                screen.get(suuAnimation.actor).height += (suuAnimation.height - screen.get(suuAnimation.actor).height) / suuAnimation.fps;
-                screen.get(suuAnimation.actor).angle += (suuAnimation.angle - screen.get(suuAnimation.actor).angle) / suuAnimation.fps;
-                screen.get(suuAnimation.actor).alpha += (suuAnimation.alpha - screen.get(suuAnimation.actor).alpha) / suuAnimation.fps;
+                s_screen.get(suuAnimation.actor).x += (suuAnimation.x - s_screen.get(suuAnimation.actor).x) / suuAnimation.fps;
+                s_screen.get(suuAnimation.actor).y += (suuAnimation.y - s_screen.get(suuAnimation.actor).y) / suuAnimation.fps;
+                s_screen.get(suuAnimation.actor).width += (suuAnimation.width - s_screen.get(suuAnimation.actor).width) / suuAnimation.fps;
+                s_screen.get(suuAnimation.actor).height += (suuAnimation.height - s_screen.get(suuAnimation.actor).height) / suuAnimation.fps;
+                s_screen.get(suuAnimation.actor).angle += (suuAnimation.angle - s_screen.get(suuAnimation.actor).angle) / suuAnimation.fps;
+                s_screen.get(suuAnimation.actor).alpha += (suuAnimation.alpha - s_screen.get(suuAnimation.actor).alpha) / suuAnimation.fps;
                 suuAnimation.fps --;
             }
-            screen.get(suuAnimation.actor).position_update();
+            s_screen.get(suuAnimation.actor).position_update();
         }
 
         suuAnimation.ed = function () {
-            animation.remove(suuAnimation.actor);
+            s_animation.remove(suuAnimation.actor);
         }
 
         return suuAnimation;
@@ -343,24 +383,24 @@ function webgl_op(){
         "attribute vec4 aposition;\n" +
         "attribute vec2 atexcoord;\n" +
         "varying vec2 texcoord;\n" +
-        "uniform mat4 mposition;\n" +
-        "uniform vec2 mtexcoord;\n" +
-        "uniform vec4 tposition;\n" +
-        "uniform vec2 ttexcoord;\n" +
+        "uniform mat4 matrix_position;\n" +
+        "uniform vec2 scale_texcoord;\n" +
+        "uniform vec4 translate_position;\n" +
+        "uniform vec2 translate_texcoord;\n" +
         "void main() {\n" +
-        "	texcoord = atexcoord * mtexcoord + ttexcoord;\n"+
-        "	gl_Position = aposition * mposition + tposition;\n" +
+        "	texcoord = atexcoord * scale_texcoord + translate_texcoord;\n"+
+        "	gl_Position = aposition * matrix_position + translate_position;\n" +
         "}\n";
     var FRAGMENT_SHADER_SOURCE =
         "#ifdef GL_ES\n" +
         "	precision mediump float;\n" +
         "#endif\n" +
         "varying vec2 texcoord;\n" +
-        "uniform sampler2D texture;\n" +
-        "uniform vec4 color;\n" +
+        "uniform sampler2D texture_object;\n" +
+        "uniform vec4 texture_color;\n" +
         "void main() {\n" +
-        "   vec3 v = texture2D(texture, texcoord).rgb;"+
-        "	gl_FragColor = texture2D(texture, texcoord) * color;\n" +
+        "   vec3 v = texture2D(texture_object, texcoord).rgb;"+
+        "	gl_FragColor = texture2D(texture_object, texcoord) * texture_color;\n" +
         "}\n";
 
     var vertex_shader = gl.createShader(gl.VERTEX_SHADER);
@@ -401,15 +441,15 @@ function webgl_op(){
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
     //图形缩放
-    mposition = gl.getUniformLocation(program, "mposition");;
+    matrix_position = gl.getUniformLocation(program, "matrix_position");;
     //图形移动
-    tposition = gl.getUniformLocation(program, "tposition");;
+    translate_position = gl.getUniformLocation(program, "translate_position");;
     //纹理裁剪
-    mtexcoord = gl.getUniformLocation(program, "mtexcoord");;
+    scale_texcoord = gl.getUniformLocation(program, "scale_texcoord");;
     //纹理选择
-    ttexcoord = gl.getUniformLocation(program, "ttexcoord");;
-    texture = gl.getUniformLocation(program, "texture");
-    color = gl.getUniformLocation(program, "color");
+    translate_texcoord = gl.getUniformLocation(program, "translate_texcoord");;
+    texture_object = gl.getUniformLocation(program, "texture_object");
+    texture_color = gl.getUniformLocation(program, "texture_color");
 
     //透明png
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -417,21 +457,21 @@ function webgl_op(){
 }
 
 function webgl_play(){
-    for (var key in animation.obj) {
-        animation.get(key).play();
+    for (var key in s_animation.object) {
+        s_animation.get(key).play();
     }
 
-    screen.ed_key = screen.op_key;
-    for (var i = 0; i < screen.size; i++) {
-        screen.getnext(screen.ed_key).update();
+    s_screen.ed_key = s_screen.op_key;
+    for (var i = 0; i < s_screen.size; i++) {
+        s_screen.getnext(s_screen.ed_key).update();
     }
 
     gl.clearColor(0.5, 0.5, 0.5, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    screen.ed_key = screen.op_key;
-    for (var i = 0; i < screen.size; i++) {
-        screen.getnext(screen.ed_key).play();
+    s_screen.ed_key = s_screen.op_key;
+    for (var i = 0; i < s_screen.size; i++) {
+        s_screen.getnext(s_screen.ed_key).play();
     }
 
     fps ++;
@@ -451,7 +491,6 @@ function webgl_play(){
 var date;
 var second = 0;
 var fps = 0;
-
 //开始调用执行
 function op(canvas, width, height, fps){
     var canvas = document.getElementById(canvas);
@@ -460,59 +499,77 @@ function op(canvas, width, height, fps){
     canvas.height = height;
     webgl_width = width;
     webgl_height = height;
-    screen = MinLinkedHashMap.op();
-    image = MinHashMap.op();
-    animation = MinHashMap.op();
-    sound = MinLinkedHashMap.op();
+    window_width = window.innerWidth;
+    window_height = window.innerHeight;
+    window.addEventListener("resize", function () {
+        window_width = window.innerWidth;
+        window_height = window.innerHeight;
+    }, false);
+
+    s_screen = MinLinkedHashMap.op();
+    image_texture = MinHashMap.op();
+    s_animation = MinHashMap.op();
+    s_sound = MinLinkedHashMap.op();
     unused_texture = new Array();
+    event_actor = new Array();
 
     play_time = 1000 / fps;
     gl = canvas.getContext("webgl");
     webgl_op();
-    // screen.put("1",SuuActor.text_op(100, 100, 300, 50, 20, "#FF00FF", "11sssssssssssss1", "key"));
-    // // screen.put("2",SuuActor.op(0, 0, 100, 100, 5, 4,"image/robin.png"));
-    // screen.put("2",SuuActor.op(0, 0, 100, 100, 8, 4,"image/xxyd.png"));
-
     setInterval("webgl_play();", play_time);
+}
+
+//s_screen
+function addeventactor(actorname, actor) {
+    s_screen.put(actorname, actor);
+    event_actor.add(actorname);
+}
+function deleteactor(actorname) {
+    if (image_texture.get(s_screen.get(actorname).key).count -- == 0) {
+        unused_texture.add(image_texture.get(s_screen.get(actorname).key).texture);
+        image_texture.remove(s_screen.get(actorname).key);
+        event_actor.remove(actorname);
+    }
+    s_screen.remove(actorname);
 }
 
 //加载点击和触摸事件
 function addevent(canvas){
     var x,y;
     canvas.addEventListener("mousedown",function (e) {
-        x = e.clientX;
-        y = webgl_height - e.clientY;
+        x = Math.round(e.clientX / window_width * webgl_width);
+        y = Math.round((1 - e.clientY / window_height) * webgl_height);
         document.getElementById("operationMsg").innerHTML ="mousedown:" + x + "," + y;
         down(x, y);
     },false);
     canvas.addEventListener("mousemove",function (e) {
-        x = e.clientX;
-        y = webgl_height - e.clientY;
+        x = Math.round(e.clientX / window_width * webgl_width);
+        y = Math.round((1 - e.clientY / window_height) * webgl_height);
         document.getElementById("operationMsg").innerHTML ="mousemove:" + x + "," + y;
         move(x, y);
     },false);
     canvas.addEventListener("mouseup",function (e) {
-        x = e.clientX;
-        y = webgl_height - e.clientY;
+        x = Math.round(e.clientX / window_width * webgl_width);
+        y = Math.round((1 - e.clientY / window_height) * webgl_height);
         document.getElementById("operationMsg").innerHTML ="mouseup:" + x + "," + y;
         up(x, y);
     },false);
 
     canvas.addEventListener("touchstart",function (e) {
-        x = e.touches[0].clientX;
-        y = webgl_height - Math.floor(e.touches[0].clientY);
+        x = Math.round(e.touches[0].clientX / window_width * webgl_width);
+        y = Math.round((1 - Math.floor(e.touches[0].clientY) / window_height) * webgl_height);
         document.getElementById("operationMsg").innerHTML ="touchstart:" + x + "," + y;
         down(x, y);
     },false);
     canvas.addEventListener("touchmove",function (e) {
-        x = e.pageX;
-        y = webgl_height - Math.floor(e.touches[0].clientY);
+        x = Math.round(e.touches[0].clientX / window_width * webgl_width);
+        y = Math.round((1 - Math.floor(e.touches[0].clientY) / window_height) * webgl_height);
         document.getElementById("operationMsg").innerHTML ="touchmove:" + x + "," + y;
         move(x, y);
     },false);
     canvas.addEventListener("touchend",function (e) {
-        x = e.pageX;
-        y = webgl_height - Math.floor(e.touches[0].clientY);
+        x = Math.round(e.touches[0].clientX / window_width * webgl_width);
+        y = Math.round((1 - Math.floor(e.touches[0].clientY) / window_height) * webgl_height);
         document.getElementById("operationMsg").innerHTML ="touchend:" + x + "," + y;
         up(x, y);
     },false);
@@ -529,3 +586,4 @@ function move(x, y) {
 function up(x, y) {
     
 }
+
