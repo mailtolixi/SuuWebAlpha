@@ -19,13 +19,13 @@ var gl;
 var image_texture;
 var unused_texture;
 var event_actor;
+var event_actors;
 
 var webgl_width;
 var webgl_height;
 var window_width;
 var window_height;
 var play_time;
-
 
 //图像大小与位置
 var translate_position;
@@ -248,15 +248,15 @@ var SuuActor = {
         suuActor.update = function () {
         }
 
-        suuActor.down = function () {
+        suuActor.down = function (x, y) {
 
         }
 
-        suuActor.move = function () {
+        suuActor.move = function (x, y) {
 
         }
 
-        suuActor.up = function () {
+        suuActor.up = function (x, y) {
 
         }
 
@@ -268,7 +268,6 @@ var SuuActor = {
         var suuActor = SuuActor.new(x, y, width, height);
 
         //SuuActor-variable
-
         suuActor.divideX = divideX;
         suuActor.divideY = divideY;
         suuActor.key = image_path;
@@ -288,11 +287,11 @@ var SuuActor = {
         //SuuActor-function
         suuActor.texcoord_update = function () {
             gl.uniform2f(scale_texcoord, 1 / suuActor.divideX, 1 / suuActor.divideY);
-            gl.uniform2f(translate_texcoord, (Math.ceil(suuActor.chooseX/5) - 1) / suuActor.divideX, (suuActor.chooseY - 1) / suuActor.divideY);
+            gl.uniform2f(translate_texcoord, (Math.ceil(suuActor.chooseX) - 1) / suuActor.divideX, (suuActor.chooseY - 1) / suuActor.divideY);
         }
         suuActor.update = function () {
             suuActor.chooseX ++;
-            if (Math.ceil(suuActor.chooseX/5) > suuActor.divideX){
+            if (Math.ceil(suuActor.chooseX) > suuActor.divideX){
                 suuActor.chooseX = 1;
             }
             suuActor.texcoord_update();
@@ -506,12 +505,13 @@ function op(canvas, width, height, fps){
         window_height = window.innerHeight;
     }, false);
 
+    event_actor = null;
     s_screen = MinLinkedHashMap.op();
     image_texture = MinHashMap.op();
     s_animation = MinHashMap.op();
     s_sound = MinLinkedHashMap.op();
     unused_texture = new Array();
-    event_actor = new Array();
+    event_actors = new Array();
 
     play_time = 1000 / fps;
     gl = canvas.getContext("webgl");
@@ -522,13 +522,13 @@ function op(canvas, width, height, fps){
 //s_screen
 function addeventactor(actorname, actor) {
     s_screen.put(actorname, actor);
-    event_actor.add(actorname);
+    event_actors.push(actorname);
 }
 function deleteactor(actorname) {
     if (image_texture.get(s_screen.get(actorname).key).count -- == 0) {
-        unused_texture.add(image_texture.get(s_screen.get(actorname).key).texture);
+        unused_texture.push(image_texture.get(s_screen.get(actorname).key).texture);
         image_texture.remove(s_screen.get(actorname).key);
-        event_actor.remove(actorname);
+        event_actors.remove(actorname);
     }
     s_screen.remove(actorname);
 }
@@ -576,14 +576,23 @@ function addevent(canvas){
 }
 
 function down(x, y) {
-    
+    for (var i = event_actors.length - 1; i >= 0; i --) {
+        if (s_screen.get(event_actors[i]).inactor(x, y)) {
+            event_actor = event_actors[i];
+            s_screen.get(event_actor).down(x, y);
+            break;
+        }
+    }
 }
 
 function move(x, y) {
-    
+    s_screen.get(event_actor).move(x, y);
 }
 
 function up(x, y) {
-    
+    if (event_actor != null) {
+        s_screen.get(event_actor).up(x, y);
+        event_actor = null;
+    }
 }
 
