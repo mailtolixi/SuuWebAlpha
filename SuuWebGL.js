@@ -32,7 +32,7 @@ var translate_position;
 var matrix_position;
 //纹理分割与选择
 var translate_texcoord;
-var matrix_texcoord;
+var scale_texcoord;
 //纹理贴图与颜色
 var texture_object;
 var texture_color;
@@ -194,7 +194,7 @@ var SuuImage = {
 }
 
 var SuuActor = {
-    new: function (x, y, width, height, divideX, divideY) {
+    new: function (x, y, width, height) {
         var suuActor = {};
 
         //SuuActor-variable
@@ -202,26 +202,17 @@ var SuuActor = {
         suuActor.y = y;
         suuActor.width = width;
         suuActor.height = height;
-        suuActor.divideX = divideX;
-        suuActor.divideY = divideY;
-        suuActor.chooseX = 1;
-        suuActor.chooseY = 1;
         suuActor.angle = 0;
         suuActor.alpha = 1;
-        suuActor.opposite_flag = false;
-        suuActor.opposite_texture_number = 1;
-        suuActor.matrix4;
-        suuActor.matrix2;
+        suuActor.matrix;
 
         //SuuActor-function
         suuActor.play = function(){
             if (suuActor.x < webgl_width && suuActor.y < webgl_height &&
                 -suuActor.x < suuActor.width && -suuActor.y < suuActor.height ) {
-                gl.uniformMatrix4fv(matrix_position, false, suuActor.matrix4);
+                gl.uniformMatrix4fv(matrix_position, false, suuActor.matrix);
                 gl.uniform4f(translate_position, suuActor.x * 2 / webgl_width - 1, suuActor.y * 2 / webgl_height - 1, 0, 0);
-                gl.uniformMatrix2fv(matrix_texcoord, false, suuActor.matrix2);
-                gl.uniform2f(translate_texcoord,  (suuActor.chooseX - suuActor.opposite_texture_number) / suuActor.divideX,
-                    (suuActor.chooseY - 1) / suuActor.divideY);
+                suuActor.texcoord_update();
                 suuActor.color_update();
                 gl.bindTexture(gl.TEXTURE_2D, image_texture.get(suuActor.key).texture);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -229,7 +220,7 @@ var SuuActor = {
         }
 
         suuActor.position_update = function () {
-            suuActor.matrix4 = new Float32Array([
+            suuActor.matrix = new Float32Array([
                 suuActor.width * 2 / webgl_width * Math.cos((suuActor.angle % 360) * Math.PI / 180),
                 suuActor.height * 2 / webgl_height * Math.sin((suuActor.angle % 360) * Math.PI / 180), 0, 0,
                 -suuActor.width * 2 / webgl_width * Math.sin((suuActor.angle % 360) * Math.PI / 180),
@@ -239,29 +230,6 @@ var SuuActor = {
             ]);
         }
 
-        suuActor.texcoord_update = function () {
-            if (suuActor.opposite_flag) {
-                suuActor.matrix2 = new Float32Array([
-                    -1 / suuActor.divideX, 0,
-                    0, 1 / suuActor.divideY
-                ]);
-            } else {
-                suuActor.matrix2 = new Float32Array([
-                    1 / suuActor.divideX, 0,
-                    0, 1 / suuActor.divideY
-                ]);
-            }
-        }
-
-        suuActor.opposite = function () {
-            suuActor.opposite_flag = !suuActor.opposite_flag;
-            if (suuActor.opposite_flag) {
-                suuActor.opposite_texture_number = 0;
-            } else {
-                suuActor.opposite_texture_number = 1;
-            }
-            suuActor.texcoord_update();
-        }
 
         suuActor.color_update = function () {
             gl.uniform4f(texture_color, 1, 1, 1, suuActor.alpha);
@@ -293,15 +261,18 @@ var SuuActor = {
         }
 
         suuActor.position_update();
-        suuActor.texcoord_update();
 
         return suuActor;
     },
     op: function (x, y, width, height, divideX, divideY, image_path){
-        var suuActor = SuuActor.new(x, y, width, height, divideX, divideY);
+        var suuActor = SuuActor.new(x, y, width, height);
 
         //SuuActor-variable
+        suuActor.divideX = divideX;
+        suuActor.divideY = divideY;
         suuActor.key = image_path;
+        suuActor.chooseX = 1;
+        suuActor.chooseY = 1;
 
         if(!image_texture.containskey(suuActor.key)) {
             if (unused_texture.length > 0) {
@@ -314,6 +285,10 @@ var SuuActor = {
         }
 
         //SuuActor-function
+        suuActor.texcoord_update = function () {
+            gl.uniform2f(scale_texcoord, 1 / suuActor.divideX, 1 / suuActor.divideY);
+            gl.uniform2f(translate_texcoord, (Math.ceil(suuActor.chooseX) - 1) / suuActor.divideX, (suuActor.chooseY - 1) / suuActor.divideY);
+        }
         suuActor.update = function () {
             suuActor.chooseX ++;
             if (Math.ceil(suuActor.chooseX) > suuActor.divideX){
@@ -325,7 +300,7 @@ var SuuActor = {
         return suuActor;
     },
     text_op: function (x, y, width, height, font_size, font_color, text, key){
-        var suuActor = SuuActor.new(x, y, width, height, 1, 1);
+        var suuActor = SuuActor.new(x, y, width, height);
 
         //SuuActor-variable
         suuActor.key = key;
@@ -339,7 +314,14 @@ var SuuActor = {
                 SuuImage.text_op(gl.createTexture(), suuActor.key, text, width, height, font_size, font_color);
             }
         }
+
+        // gl.deleteTexture(image_texture.get(suuActor.key).texture_object);
+
         //SuuActor-function
+        suuActor.texcoord_update = function () {
+            gl.uniform2f(scale_texcoord, 1, 1);
+            gl.uniform2f(translate_texcoord, 0, 0);
+        }
         suuActor.settext = function (text) {
             suuActor.text = text;
             SuuImage.text_op(image_texture.get(suuActor.key).texture, suuActor.key, text, width, height, font_size, font_color);
@@ -349,7 +331,7 @@ var SuuActor = {
     }
 };
 var SuuAnimation = {
-    op: function (actor, x, y, width, height, angle, alpha, fps, end) {
+    op: function (actor, x, y, width, height, angle, alpha, fps) {
         var suuAnimation = {};
 
         //SuuActor-variable
@@ -371,8 +353,7 @@ var SuuAnimation = {
                 s_screen.get(suuAnimation.actor).height = suuAnimation.height;
                 s_screen.get(suuAnimation.actor).angle = suuAnimation.angle;
                 s_screen.get(suuAnimation.actor).alpha = suuAnimation.alpha;
-                s_animation.remove(suuAnimation.actor);
-                end();
+                suuAnimation.ed();
             } else {
                 s_screen.get(suuAnimation.actor).x += (suuAnimation.x - s_screen.get(suuAnimation.actor).x) / suuAnimation.fps;
                 s_screen.get(suuAnimation.actor).y += (suuAnimation.y - s_screen.get(suuAnimation.actor).y) / suuAnimation.fps;
@@ -385,44 +366,14 @@ var SuuAnimation = {
             s_screen.get(suuAnimation.actor).position_update();
         }
 
+        suuAnimation.ed = function () {
+            s_animation.remove(suuAnimation.actor);
+        }
+
         return suuAnimation;
     }
 }
-
-
-//----------function----------//
-var date;
-var second = 0;
-var fps = 0;
-//开始调用执行
-function op(canvas, width, height, fps){
-    var canvas = document.getElementById(canvas);
-    addevent(canvas);
-    canvas.width = width;
-    canvas.height = height;
-    webgl_width = width;
-    webgl_height = height;
-    window_width = window.innerWidth;
-    window_height = window.innerHeight;
-    window.addEventListener("resize", function () {
-        window_width = window.innerWidth;
-        window_height = window.innerHeight;
-    }, false);
-
-    event_actor = null;
-    s_screen = MinLinkedHashMap.op();
-    image_texture = MinHashMap.op();
-    s_animation = MinHashMap.op();
-    s_sound = MinLinkedHashMap.op();
-    unused_texture = new Array();
-    event_actors = new Array();
-
-    play_time = 1000 / fps;
-    gl = canvas.getContext("webgl");
-    webgl_op();
-    setInterval("webgl_play();", play_time);
-}
-
+//----------webgl----------//
 function webgl_op(){
     gl.viewport(0, 0, webgl_width, webgl_height);
 
@@ -432,7 +383,7 @@ function webgl_op(){
         "attribute vec2 atexcoord;\n" +
         "varying vec2 texcoord;\n" +
         "uniform mat4 matrix_position;\n" +
-        "uniform mat2 matrix_texcoord;\n" +
+        "uniform vec2 matrix_texcoord;\n" +
         "uniform vec4 translate_position;\n" +
         "uniform vec2 translate_texcoord;\n" +
         "void main() {\n" +
@@ -447,6 +398,7 @@ function webgl_op(){
         "uniform sampler2D texture_object;\n" +
         "uniform vec4 texture_color;\n" +
         "void main() {\n" +
+        "   vec3 v = texture2D(texture_object, texcoord).rgb;"+
         "	gl_FragColor = texture2D(texture_object, texcoord) * texture_color;\n" +
         "}\n";
 
@@ -492,7 +444,7 @@ function webgl_op(){
     //图形移动
     translate_position = gl.getUniformLocation(program, "translate_position");;
     //纹理裁剪
-    matrix_texcoord = gl.getUniformLocation(program, "matrix_texcoord");;
+    scale_texcoord = gl.getUniformLocation(program, "scale_texcoord");;
     //纹理选择
     translate_texcoord = gl.getUniformLocation(program, "translate_texcoord");;
     texture_object = gl.getUniformLocation(program, "texture_object");
@@ -503,13 +455,7 @@ function webgl_op(){
     gl.enable(gl.BLEND);
 }
 
-function before_update() {
-
-}
-
 function webgl_play(){
-    before_update();
-    
     for (var key in s_animation.object) {
         s_animation.get(key).play();
     }
@@ -518,7 +464,7 @@ function webgl_play(){
     for (var i = 0; i < s_screen.size; i++) {
         s_screen.getnext(s_screen.ed_key).update();
     }
-    
+
     gl.clearColor(0.5, 0.5, 0.5, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
@@ -539,47 +485,54 @@ function webgl_play(){
         fps = 0;
     }
 }
-//添加普通角色
-function add_actor(actor_name, actor) {
-    s_screen.put(actor_name, actor);
+
+//----------function----------//
+var date;
+var second = 0;
+var fps = 0;
+//开始调用执行
+function op(canvas, width, height, fps){
+    var canvas = document.getElementById(canvas);
+    addevent(canvas);
+    canvas.width = width;
+    canvas.height = height;
+    webgl_width = width;
+    webgl_height = height;
+    window_width = window.innerWidth;
+    window_height = window.innerHeight;
+    window.addEventListener("resize", function () {
+        window_width = window.innerWidth;
+        window_height = window.innerHeight;
+    }, false);
+
+    event_actor = null;
+    s_screen = MinLinkedHashMap.op();
+    image_texture = MinHashMap.op();
+    s_animation = MinHashMap.op();
+    s_sound = MinLinkedHashMap.op();
+    unused_texture = new Array();
+    event_actors = new Array();
+
+    play_time = 1000 / fps;
+    gl = canvas.getContext("webgl");
+    webgl_op();
+    setInterval("webgl_play();", play_time);
 }
-//添加事件角色，响应点击事件
-function add_event_actor(actor_name, actor) {
-    s_screen.put(actor_name, actor);
-    event_actors.push(actor_name);
+
+//s_screen
+function addeventactor(actorname, actor) {
+    s_screen.put(actorname, actor);
+    event_actors.push(actorname);
 }
-//删除角色，同时图片使用次数-1,使用次数=0释放图片和纹理
-function delete_actor(actor_name) {
-    if (image_texture.get(s_screen.get(actor_name).key).count -- == 0) {
-        unused_texture.push(image_texture.get(s_screen.get(actor_name).key).texture);
-        image_texture.remove(s_screen.get(actor_name).key);
-        event_actors.remove(actor_name);
+function deleteactor(actorname) {
+    if (image_texture.get(s_screen.get(actorname).key).count -- == 0) {
+        unused_texture.push(image_texture.get(s_screen.get(actorname).key).texture);
+        image_texture.remove(s_screen.get(actorname).key);
+        event_actors.remove(actorname);
     }
-    s_screen.remove(actor_name);
+    s_screen.remove(actorname);
 }
-//手动加载图片和纹理，删除角色不释放
-function add_image(filepath) {
-    if(!image_texture.containskey(filepath)) {
-        if (unused_texture.length > 0) {
-            SuuImage.unused_op(unused_texture.pop(), filepath);
-        } else {
-            SuuImage.op(gl.createTexture(), filepath);
-        }
-    } else {
-        image_texture.get(filepath).count ++;
-    }
-}
-//手动释放图片和纹理，图片使用次数-1,使用次数=0释放图片和纹理
-function delete_image(filepath) {
-    if (image_texture.get(filepath).count -- == 0) {
-        unused_texture.push(image_texture.get(filepath).texture);
-        image_texture.remove(filepath);
-    }
-}
-//角色动画，一个角色只能同时播放一个动画
-function add_animation(actor, x, y, width, height, angle, alpha, fps, end) {
-    s_animation.put(actor, SuuAnimation.op(actor, x, y, width, height, angle, alpha, fps, end));
-}
+
 //加载点击和触摸事件
 function addevent(canvas){
     var x,y;
