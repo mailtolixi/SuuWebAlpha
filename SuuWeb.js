@@ -642,4 +642,3 @@ function up(x, y) {
         event_actor = null;
     }
 }
-
