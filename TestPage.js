@@ -12,4 +12,5 @@
 // s_screen.put("2",SuuActor.op_screen.js(0, 0, 100, 100, 8, 4,"/storage/extSdCard/SuuWebAlpha/image/xxyd.png"));
 
 document.write("<script id=\"op_screen\" src=\"script/op_screen.js\"></script>");
+
 // document.getElementById("op_screen").parentNode.removeChild(document.getElementById("divCell"));
